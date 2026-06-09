@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react'
-import { Download, Play, Layers, Coins } from 'lucide-react'
+import { Download, Play, Layers, Coins, Sparkles } from 'lucide-react'
 import ApiKeyModal from './components/ApiKeyModal'
 import UploadZone from './components/UploadZone'
 import ImageGrid from './components/ImageGrid'
@@ -8,6 +8,7 @@ import ProgressBar from './components/ProgressBar'
 import Sidebar from './components/Sidebar'
 import type { ImageItem, SkuConfig } from './lib/types'
 import { describeImage, fileToBase64 } from './lib/claude'
+import { getDemoDescription, DEMO_MODE_KEY } from './lib/demo'
 import { generateSku, defaultSkuConfig } from './lib/sku'
 import { exportToCsv } from './lib/export'
 
@@ -22,9 +23,17 @@ export default function App() {
   const [isProcessing, setIsProcessing] = useState(false)
   const abortRef = useRef(false)
 
+  const isDemoMode = apiKey === DEMO_MODE_KEY
+
   const saveKey = (key: string) => {
     localStorage.setItem(API_KEY_STORAGE, key)
     setApiKey(key)
+    setShowKeyModal(false)
+  }
+
+  const enterDemoMode = () => {
+    localStorage.setItem(API_KEY_STORAGE, DEMO_MODE_KEY)
+    setApiKey(DEMO_MODE_KEY)
     setShowKeyModal(false)
   }
 
@@ -50,24 +59,26 @@ export default function App() {
     abortRef.current = false
 
     const queue = [...pending]
-    let active = 0
 
     const processNext = async (): Promise<void> => {
       if (!queue.length || abortRef.current) return
       const item = queue.shift()!
-      active++
 
       setItems(prev => prev.map(i => i.id === item.id ? { ...i, status: 'processing' } : i))
 
       try {
-        const { data, mediaType } = await fileToBase64(item.file)
-        const description = await describeImage(apiKey, data, mediaType)
+        let description: string
+        if (isDemoMode) {
+          description = await getDemoDescription(item.file.name)
+        } else {
+          const { data, mediaType } = await fileToBase64(item.file)
+          description = await describeImage(apiKey, data, mediaType)
+        }
         setItems(prev => prev.map(i => i.id === item.id ? { ...i, description, status: 'done' } : i))
       } catch (err) {
         const error = err instanceof Error ? err.message : 'Unknown error'
         setItems(prev => prev.map(i => i.id === item.id ? { ...i, status: 'error', error } : i))
       } finally {
-        active--
         await processNext()
       }
     }
@@ -75,7 +86,7 @@ export default function App() {
     const workers = Array.from({ length: Math.min(CONCURRENCY, pending.length) }, () => processNext())
     await Promise.all(workers)
     setIsProcessing(false)
-  }, [apiKey, isProcessing, items])
+  }, [apiKey, isDemoMode, isProcessing, items])
 
   const updateDescription = useCallback((id: string, description: string) => {
     setItems(prev => prev.map(i => i.id === id ? { ...i, description } : i))
@@ -103,12 +114,18 @@ export default function App() {
         <div className="max-w-screen-2xl mx-auto px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-              <Coins className="w-4.5 h-4.5 text-white" style={{ width: 18, height: 18 }} />
+              <Coins style={{ width: 18, height: 18 }} className="text-white" />
             </div>
             <div>
               <span className="text-slate-100 font-semibold tracking-tight">CollectibleAI</span>
               <span className="text-slate-500 text-xs ml-2">Bulk Image Describer</span>
             </div>
+            {isDemoMode && (
+              <span className="flex items-center gap-1 text-xs bg-amber-500/15 text-amber-400 border border-amber-500/25 px-2 py-0.5 rounded-full">
+                <Sparkles className="w-3 h-3" />
+                Demo Mode
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-3">
@@ -162,22 +179,20 @@ export default function App() {
           hasImages={items.length > 0}
           isProcessing={isProcessing}
           onClearAll={clearAll}
+          isDemoMode={isDemoMode}
         />
 
         <main className="flex-1 flex flex-col gap-5 min-w-0">
-          {/* Upload zone — always visible when not processing bulk */}
           {!isProcessing && (
             <UploadZone onFiles={handleFiles} disabled={isProcessing} />
           )}
 
-          {/* Progress */}
           {(isProcessing || processingCount > 0) && (
             <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
               <ProgressBar done={donePending} total={items.length} errors={errorCount} />
             </div>
           )}
 
-          {/* Image grid */}
           {items.length > 0 && (
             <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
               <div className="flex items-center gap-2 mb-3">
@@ -191,7 +206,6 @@ export default function App() {
             </div>
           )}
 
-          {/* Results table */}
           {donePending > 0 && (
             <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
               <div className="flex items-center justify-between mb-3">
@@ -209,7 +223,6 @@ export default function App() {
             </div>
           )}
 
-          {/* Empty state */}
           {!items.length && (
             <div className="flex-1 flex items-center justify-center text-center py-16">
               <div>
@@ -223,7 +236,7 @@ export default function App() {
         </main>
       </div>
 
-      {showKeyModal && <ApiKeyModal onSave={saveKey} />}
+      {showKeyModal && <ApiKeyModal onSave={saveKey} onDemo={enterDemoMode} />}
     </div>
   )
 }

@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { Key, Eye, EyeOff, ExternalLink } from 'lucide-react'
+import { Key, Eye, EyeOff, ExternalLink, Sparkles } from 'lucide-react'
 
 interface Props {
   onSave: (key: string) => void
+  onDemo: () => void
 }
 
-export default function ApiKeyModal({ onSave }: Props) {
+export default function ApiKeyModal({ onSave, onDemo }: Props) {
   const [key, setKey] = useState('')
   const [show, setShow] = useState(false)
 
@@ -46,16 +47,33 @@ export default function ApiKeyModal({ onSave }: Props) {
         <button
           onClick={() => key.trim() && onSave(key.trim())}
           disabled={!key.trim()}
-          className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:text-slate-500 text-white font-semibold py-3 rounded-lg transition-colors"
+          className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:text-slate-500 text-white font-semibold py-3 rounded-lg transition-colors mb-3"
         >
           Start Describing Images
         </button>
+
+        <div className="relative flex items-center gap-3 my-4">
+          <div className="flex-1 border-t border-slate-700" />
+          <span className="text-xs text-slate-500">or</span>
+          <div className="flex-1 border-t border-slate-700" />
+        </div>
+
+        <button
+          onClick={onDemo}
+          className="w-full flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold py-3 rounded-lg transition-colors"
+        >
+          <Sparkles className="w-4 h-4 text-amber-400" />
+          Try Demo Mode
+        </button>
+        <p className="text-center text-xs text-slate-500 mt-2">
+          Simulated descriptions — no API key needed
+        </p>
 
         <a
           href="https://console.anthropic.com/api-keys"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-1.5 justify-center mt-4 text-xs text-slate-400 hover:text-indigo-400 transition-colors"
+          className="flex items-center gap-1.5 justify-center mt-5 text-xs text-slate-400 hover:text-indigo-400 transition-colors"
         >
           <ExternalLink className="w-3 h-3" />
           Get your API key at console.anthropic.com

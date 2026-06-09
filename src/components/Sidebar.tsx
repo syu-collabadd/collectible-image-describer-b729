@@ -1,4 +1,4 @@
-import { Settings, Key, RotateCcw } from 'lucide-react'
+import { Settings, Key, RotateCcw, Sparkles } from 'lucide-react'
 import type { SkuConfig } from '../lib/types'
 
 interface Props {
@@ -8,6 +8,7 @@ interface Props {
   hasImages: boolean
   isProcessing: boolean
   onClearAll: () => void
+  isDemoMode?: boolean
 }
 
 export default function Sidebar({
@@ -17,6 +18,7 @@ export default function Sidebar({
   hasImages,
   isProcessing,
   onClearAll,
+  isDemoMode,
 }: Props) {
   return (
     <aside className="w-64 flex-shrink-0 flex flex-col gap-4">
@@ -87,8 +89,8 @@ export default function Sidebar({
         onClick={onResetKey}
         className="flex items-center gap-2 text-xs text-slate-500 hover:text-slate-300 transition-colors mt-auto px-1"
       >
-        <Key className="w-3.5 h-3.5" />
-        Change API key
+        {isDemoMode ? <Sparkles className="w-3.5 h-3.5 text-amber-400" /> : <Key className="w-3.5 h-3.5" />}
+        {isDemoMode ? 'Exit demo mode' : 'Change API key'}
       </button>
     </aside>
   )
